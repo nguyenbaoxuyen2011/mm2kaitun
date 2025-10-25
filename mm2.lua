@@ -291,6 +291,32 @@ task.spawn(function()
 end)
 
 repeat task.wait() until Players.LocalPlayer and Players.LocalPlayer.PlayerGui
+task.spawn(function()
+	while task.wait(1) do
+		local gui = game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+		if gui and gui:FindFirstChild("DeviceSelect") then
+			local container = gui.DeviceSelect:FindFirstChild("Container")
+			if container then
+				local tabletBtn = container:FindFirstChild("Tablet") and container.Tablet:FindFirstChild("Button")
+				local phoneBtn = container:FindFirstChild("Phone") and container.Phone:FindFirstChild("Button")
+
+				local choice = math.random(1, 2)
+				if choice == 1 and tabletBtn then
+					for _, v in pairs(getconnections(tabletBtn.MouseButton1Click)) do
+						v:Fire()
+					end
+					print("[AutoSelect] Clone chọn Tablet ✅")
+				elseif phoneBtn then
+					for _, v in pairs(getconnections(phoneBtn.MouseButton1Click)) do
+						v:Fire()
+					end
+					print("[AutoSelect] Clone chọn Phone ✅")
+				end
+			end
+		end
+	end
+end)
+
 
 local LocalPlayer = Players.LocalPlayer
 
