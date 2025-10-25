@@ -1,3 +1,23 @@
+getgenv().configs = getgenv().configs or {
+    coinFarm = true,
+	quickFarm = true, -- bật chế độ farm nhanh
+    safeHeight = 100,
+    murderDistance = 30,
+    coinWaitTime = 2,
+    loopDelay = 0.4,
+    safeWaitTime = 2,
+    resetInterval = 300,
+    enableAutoReset = false,
+	hopifnocandy = true,
+	hoptime = 120,
+    buybattlepass = false,
+	openBox = true,
+    coinNames = {"Coin_Server"},
+	webhookurl = "https://discord.com/api/webhooks/1429819953137193091/4Icj-4ni_VhffPUmnRvxdhCXGdN_e2ePihMDTVbCAu1apkqooEhSEatqfTuJm591ANwf",
+	pingOnRare = true,
+    pingTarget = "1127942194955812994",
+}
+
 repeat task.wait() until game:IsLoaded()
 repeat task.wait() until game:GetService("Players").LocalPlayer:GetAttribute("ClientLoaded")
 if getgenv().MyMM2ScriptUI then return end
@@ -650,3 +670,14 @@ task.spawn(function()
 	Players.LocalPlayer.CharacterAdded:Connect(setupDeathHop)
 end)
 -- === HẾT HOP KHI CHẾT ===
+-- 🧩 Khôi phục khi teleport lỗi hoặc reload
+task.spawn(function()
+	while task.wait(10) do
+		if not getgenv().MyMM2ScriptUI then
+			-- ⚠️ Thay link này bằng link gốc của script bạn (nếu bạn lưu trên GitHub/Pastebin)
+			loadstring(game:HttpGet("https://raw.githubusercontent.com/nguyenbaoxuyen2011/mm2kaitun/refs/heads/main/mm2.lua"))()
+			break
+		end
+	end
+end)
+
