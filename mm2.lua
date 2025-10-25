@@ -1,23 +1,3 @@
-getgenv().configs = getgenv().configs or {
-    coinFarm = true,
-	quickFarm = true, -- bật chế độ farm nhanh
-    safeHeight = 100,
-    murderDistance = 30,
-    coinWaitTime = 2,
-    loopDelay = 0.4,
-    safeWaitTime = 2,
-    resetInterval = 300,
-    enableAutoReset = false,
-	hopifnocandy = true,
-	hoptime = 120,
-    buybattlepass = false,
-	openBox = true,
-    coinNames = {"Coin_Server"},
-	webhookurl = "https://discord.com/api/webhooks/1429819953137193091/4Icj-4ni_VhffPUmnRvxdhCXGdN_e2ePihMDTVbCAu1apkqooEhSEatqfTuJm591ANwf",
-	pingOnRare = true,
-    pingTarget = "1127942194955812994",
-}
-
 repeat task.wait() until game:IsLoaded()
 repeat task.wait() until game:GetService("Players").LocalPlayer:GetAttribute("ClientLoaded")
 if getgenv().MyMM2ScriptUI then return end
@@ -57,6 +37,8 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+ScreenGui.DisplayOrder = 9999 
 
 local BlackFrame = Instance.new("Frame")
 BlackFrame.Parent = ScreenGui
@@ -79,11 +61,11 @@ MainTitle.BackgroundTransparency = 1
 MainTitle.Size = UDim2.new(1, 0, 0.5, 0)
 MainTitle.Position = UDim2.new(0, 0, 0, 0)
 MainTitle.Text = "⚔ LING ⚔"
-MainTitle.TextColor3 = Color3.fromRGB(0, 255, 255)
+MainTitle.TextColor3 = Color3.new(0.000000, 1.000000, 0.082353)
 MainTitle.TextScaled = true
 MainTitle.Font = Enum.Font.GothamBold
 MainTitle.TextStrokeTransparency = 0
-MainTitle.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+MainTitle.TextStrokeColor3 = Color3.new(1.000000, 0.007843, 0.007843)
 MainTitle.ZIndex = 11
 
 local SubTitle = Instance.new("TextLabel")
@@ -91,8 +73,8 @@ SubTitle.Parent = LogoFrame
 SubTitle.BackgroundTransparency = 1
 SubTitle.Size = UDim2.new(1, 0, 0.20, 0)
 SubTitle.Position = UDim2.new(0, 0, 0.5, 0)
-SubTitle.Text = "🎯 Murder Mystery 2 🎯"
-SubTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubTitle.Text = "👤" .. game.Players.LocalPlayer.Name
+SubTitle.TextColor3 = Color3.new(0.035294, 0.886275, 1.000000)
 SubTitle.TextScaled = true
 SubTitle.Font = Enum.Font.Gotham
 SubTitle.ZIndex = 11
@@ -103,32 +85,10 @@ CoinsLabel.BackgroundTransparency = 1
 CoinsLabel.Size = UDim2.new(1, 0, 0.23, 0)
 CoinsLabel.Position = UDim2.new(0, 0, 0.7, 10)
 CoinsLabel.Text = "🍬: 0 (+0)"
-CoinsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+CoinsLabel.TextColor3 = Color3.new(0.054902, 0.992157, 0.556863)
 CoinsLabel.Font = Enum.Font.Gotham
 CoinsLabel.TextScaled = true
 CoinsLabel.ZIndex = 11
-
-local RateLabel = Instance.new("TextLabel")
-RateLabel.Parent = LogoFrame
-RateLabel.BackgroundTransparency = 1
-RateLabel.Size = UDim2.new(1, 0, 0.23, 0)
-RateLabel.Position = UDim2.new(0, 0, 0.9, 10)
-RateLabel.Text = "⚡ 0 Candy/min"
-RateLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-RateLabel.Font = Enum.Font.Gotham
-RateLabel.TextScaled = true
-RateLabel.ZIndex = 11
-
-task.spawn(function()
-	local lastCandy = ProfileData.Materials.Owned[currency] or 0
-	while task.wait(60) do
-		local current = ProfileData.Materials.Owned[currency] or 0
-		local gained = math.max(0, current - lastCandy)
-		RateLabel.Text = "⚡ " .. tostring(gained) .. " Candy/min"
-		lastCandy = current
-	end
-end)
-
 
 local TimerLabel = Instance.new("TextLabel")
 TimerLabel.Parent = LogoFrame
@@ -136,7 +96,7 @@ TimerLabel.BackgroundTransparency = 1
 TimerLabel.Size = UDim2.new(1, 0, 0.20, 0)
 TimerLabel.Position = UDim2.new(0, 0, 1.05, 0)
 TimerLabel.Text = "⏲ 00:00:00"
-TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextColor3 = Color3.new(1.000000, 1.000000, 1.000000)
 TimerLabel.Font = Enum.Font.GothamBold
 TimerLabel.TextScaled = true
 TimerLabel.ZIndex = 11
@@ -160,7 +120,6 @@ RenderButton.MouseButton1Click:Connect(function()
     
     if isUIVisible then
         game:GetService("RunService"):Set3dRenderingEnabled(false)
-		if setfpscap then setfpscap(5) end -- Giới hạn FPS tiết kiệm CPU
         BlackFrame.Visible = true
         LogoFrame.Visible = true
         RenderButton.Text = "💡"
@@ -222,24 +181,57 @@ task.spawn(function()
 	end
 end)
 
+-- ⚙️ Hop thông minh: không vào trùng server, clone tránh nhau
+local serverVisited = {}
+local HttpService = game:GetService("HttpService")
+
+math.randomseed(tick() + tonumber(game.Players.LocalPlayer.UserId)) -- mỗi clone có seed riêng
+
 function Hop()
-    local success, response = pcall(function()
-        return game:HttpGet("https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100")
-    end)
-    if success then
-        local jsonData = game:GetService("HttpService"):JSONDecode(response)
-        if jsonData then
-            for i = 1, #jsonData.data do
-                k = jsonData.data[i].id
-                if k and k ~= game.JobId then
-                    game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, k, game:GetService("Players").LocalPlayer)
-                end
-            end
-        end
-    else
-        warn(response)
-    end
+	local placeId = game.PlaceId
+	local success, response = pcall(function()
+		return game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100")
+	end)
+
+	if not success then
+		warn("[Hop] Lỗi khi tải danh sách server:", response)
+		task.wait(5)
+		return
+	end
+
+	local data = HttpService:JSONDecode(response)
+	if not data or not data.data then return end
+
+	local availableServers = {}
+
+	-- lọc server hợp lệ, chưa join
+	for _, info in ipairs(data.data) do
+		if info.id ~= game.JobId and not serverVisited[info.id] and info.playing < info.maxPlayers then
+			table.insert(availableServers, info.id)
+		end
+	end
+
+	-- hết server → reset danh sách
+	if #availableServers == 0 then
+		serverVisited = {}
+		for _, info in ipairs(data.data) do
+			if info.id ~= game.JobId and info.playing < info.maxPlayers then
+				table.insert(availableServers, info.id)
+			end
+		end
+	end
+
+	-- chọn ngẫu nhiên 1 server khác
+	if #availableServers > 0 then
+		local chosen = availableServers[math.random(1, #availableServers)]
+		serverVisited[chosen] = true
+		print("[Hop] Đang chuyển sang server khác:", chosen)
+		game:GetService("TeleportService"):TeleportToPlaceInstance(placeId, chosen, game:GetService("Players").LocalPlayer)
+	else
+		warn("[Hop] Không có server hợp lệ để join.")
+	end
 end
+
 
 local EventInfoService = require(game:GetService("ReplicatedStorage"):WaitForChild("SharedServices"):WaitForChild("EventInfoService"))
 local Sync = require(game:GetService("ReplicatedStorage"):WaitForChild("Database"):WaitForChild("Sync"))
@@ -255,24 +247,38 @@ local totalFarmed = 0
 local lastChangeTime = tick()
 local currentCoins = 0
 
+task.spawn(function()
+    while getgenv().configs.autoHopLowPlayers do
+        local playerCount = #game:GetService("Players"):GetPlayers()
+        if playerCount < (getgenv().configs.minPlayers or 2) then
+            warn("[Hop] Server chỉ có " .. tostring(playerCount) .. " người, hop sang server mới...")
+            Hop()
+        end
+        task.wait(10)
+    end
+end)
+
+
 CoinCollected.OnClientEvent:Connect(function(p11, p12, p13, _)
     lastChangeTime = tick()
     totalFarmed = totalFarmed + _.Value
     currentCoins = ProfileData.Materials.Owned[currency] or 0
     CoinsLabel.Text = "🍬: " .. tostring(currentCoins) .. " (+" .. totalFarmed .. ")"
-    if p12 >= p13 then
+
+    if getgenv().configs.hopWhenFullCandy and p12 >= p13 then
         while task.wait(1) do
             Hop()
         end
     end
 end)
 
+
 task.spawn(function()
     while true do
         local success, err = pcall(function()
             if ProfileData and ProfileData.Materials and ProfileData.Materials.Owned then
                 currentCoins = ProfileData.Materials.Owned[currency] or 0
-                CoinsLabel.Text = "💡: " .. tostring(currentCoins) .. " (+" .. totalFarmed .. ")"
+                CoinsLabel.Text = "🍬: " .. tostring(currentCoins) .. " (+" .. totalFarmed .. ")"
             end
         end)
         
@@ -385,7 +391,7 @@ local function autoReset()
 	end
 end
 
--- 🧠 Cache coin hiệu quả
+-- ⚙️ Cache coin hiệu quả
 local coinCache = {}
 
 local function isCoin(obj)
@@ -429,71 +435,75 @@ local function getAvailableCoins()
 	return coins
 end
 
--- Ưu tiên coin gần nhất
-local function getClosestCoin(coins)
-	local char = Players.LocalPlayer.Character
-	if not (char and char:FindFirstChild("HumanoidRootPart")) then return nil end
-	local rootPos = char.HumanoidRootPart.Position
-	local closest, minDist = nil, math.huge
-
-	for _, coin in ipairs(coins) do
-		local dist = (coin.Position - rootPos).Magnitude
-		if dist < minDist then
-			minDist, closest = dist, coin
-		end
-	end
-	return closest
-end
 
 
 local function coinFarm()
-	-- 🔧 Chế độ farm nhanh
-	if getgenv().configs.quickFarm then
-		getgenv().configs.coinWaitTime = 1
-		getgenv().configs.loopDelay = 0.2
-	end
-
-	while getgenv().configs.coinFarm do
-		task.wait(getgenv().configs.loopDelay)
-
-		if not LocalPlayer:GetAttribute("Alive") then
-			task.wait(1)
-			continue
-		end
-
+	local lastTele = 0
+	while getgenv().configs.coinFarm and task.wait(getgenv().configs.loopDelay or 0.1) do
+		-- 💀 Né murderer
 		currentMurder = findMurder()
 		local distanceToMurder = getDistanceToMurder()
 
-		-- Né murderer
+		if not LocalPlayer:GetAttribute("Alive") then
+			task.wait(0.5)
+			continue
+		end
+
 		if distanceToMurder < getgenv().configs.murderDistance then
 			if not isSafe then
 				flyToSafety()
-				task.wait(getgenv().configs.safeWaitTime)
+				task.wait(getgenv().configs.safeWaitTime or 1.5)
 			end
 			continue
 		elseif isSafe then
 			returnToGround()
-			task.wait(0.3)
+			task.wait(0.2)
 		end
 
-		-- 🔍 Tìm coin gần nhất
+		-- 🪙 Lấy danh sách coin
 		local coins = getAvailableCoins()
-		if #coins > 0 and not isSafe then
-			local targetCoin = getClosestCoin(coins)
-			if targetCoin and teleportTo(targetCoin.CFrame + Vector3.new(0, 2, 0)) then
-				task.wait(0.1)
-				startCircleMovement(targetCoin.Position)
-				task.wait(math.max(0.4, getgenv().configs.coinWaitTime - 0.3))
+		if #coins > 0 then
+			local char = LocalPlayer.Character
+			local hrp = char and char:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local rootPos = hrp.Position
+				table.sort(coins, function(a, b)
+    				return (a.Position - rootPos).Magnitude < (b.Position - rootPos).Magnitude
+				end)
+
+				local pickRange = math.min(3, #coins)
+				local targetCoin = coins[math.random(1, pickRange)]
+
+				if not targetCoin then continue end
+
 				processedCoins[targetCoin] = true
-				task.delay(1.8, function()
+
+				-- ⚙️ Smart teleport để tránh rejoin
+				if tick() - lastTele > 0.12 then
+					lastTele = tick()
+					hrp.CFrame = targetCoin.CFrame + Vector3.new(0, 2, 0)
+				end
+
+				startCircleMovement(targetCoin.Position)
+				task.wait(getgenv().configs.coinWaitTime or 0.15)
+				stopCircleMovement()
+
+				task.spawn(function()
+					task.wait(2)
 					processedCoins[targetCoin] = nil
 				end)
 			end
 		else
-			stopCircleMovement()
+			-- 🧩 Không có coin → "refresh" vị trí để tránh stuck
+			local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				hrp.CFrame = hrp.CFrame + Vector3.new(0, 1, 0)
+			end
+			task.wait(0.2)
 		end
 	end
 end
+
 
 
 local function battlepass()
@@ -601,7 +611,6 @@ local function openBox(resource)
 					})
 				end)
 				if not a then warn(b) end
-
 				game:GetService("ReplicatedStorage").Remotes.Shop.BoxController:Fire(mysteryBox, result)
 			end
 			return true
@@ -611,7 +620,6 @@ local function openBox(resource)
 	end
 end
 
--- Auto mở box
 if getgenv().configs.openBox then
 	task.spawn(function()
 		while task.wait(2) do
@@ -623,7 +631,6 @@ if getgenv().configs.openBox then
 	end)
 end
 
--- Dọn coin đã xử lý
 local function cleanupProcessedCoins()
 	for coin, _ in pairs(processedCoins) do
 		if not coin.Parent then
@@ -639,45 +646,22 @@ task.spawn(function()
 	end
 end)
 
-task.spawn(autoReset)
-task.spawn(coinFarm)
+task.spawn(function()
+	autoReset()
+end)
 
--- Auto hop nếu không nhặt được candy
+task.spawn(function()
+	coinFarm()
+end)
+
 if getgenv().configs.hopifnocandy then
-	task.spawn(function()
-		while task.wait() do
-			if tick() - lastChangeTime > getgenv().configs.hoptime then
-				Hop()
-			end
-		end
-	end)
+    task.spawn(function()
+        while task.wait() do
+            if tick() - lastChangeTime > getgenv().configs.hoptime then
+                while task.wait(1) do
+                    Hop()
+                end
+            end
+        end
+    end)
 end
-
--- === HOP KHI CHẾT ===
-task.spawn(function()
-	local function setupDeathHop(character)
-		local humanoid = character:WaitForChild("Humanoid")
-		humanoid.Died:Connect(function()
-			task.wait(2)
-			Hop()
-		end)
-	end
-
-	if Players.LocalPlayer.Character then
-		setupDeathHop(Players.LocalPlayer.Character)
-	end
-
-	Players.LocalPlayer.CharacterAdded:Connect(setupDeathHop)
-end)
--- === HẾT HOP KHI CHẾT ===
--- 🧩 Khôi phục khi teleport lỗi hoặc reload
-task.spawn(function()
-	while task.wait(10) do
-		if not getgenv().MyMM2ScriptUI then
-			-- ⚠️ Thay link này bằng link gốc của script bạn (nếu bạn lưu trên GitHub/Pastebin)
-			loadstring(game:HttpGet("https://raw.githubusercontent.com/nguyenbaoxuyen2011/mm2kaitun/refs/heads/main/mm2.lua"))()
-			break
-		end
-	end
-end)
-
